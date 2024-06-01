@@ -14,40 +14,54 @@ class Splash extends StatefulWidget {
 
 class _SplashState extends State<Splash> {
   @override
-
   void initState() {
-   
     super.initState();
-    Future.delayed(const Duration(seconds: 2),(){
-     
-         Navigator.pushReplacement(context, MaterialPageRoute(builder:(context) =>const Wrapper() ,));
-  
-    
-    }
-    );
-
+    Future.delayed(const Duration(seconds: 2), () {
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Wrapper(),
+          ));
+    });
   }
-  Widget build(BuildContext context) {
-     mq =MediaQuery.of(context).size;
-    return Scaffold(
-       body: Stack(children: [
-         Positioned(
-          top: mq.height *.15,
-          width: mq.width *.5,
-          right: mq.width *.25,
-          child: Image.asset('images/meetme.png')),
 
-           Positioned(
-          bottom: mq.height *.15,
-          width: mq.width,
-        
-         
-          child: Text('Made in Bharat ❤️',
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 20,fontWeight:FontWeight.bold,color:  Colors.black),)
-          )
-          
-      ],),
+  Widget build(BuildContext context) {
+    mq = MediaQuery.of(context).size;
+    return Scaffold(
+        backgroundColor: Color(0xff252041),
+      body: Stack(
+        children: [
+          Positioned(
+              top: mq.height * .15,
+              width: mq.width * .5,
+              right: mq.width * .25,
+              child: Column(
+                children: [
+                  Image.asset('images/icon.png.png'),
+                  SizedBox(height: 10,),
+                  Text(
+                'TaskApp',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              )
+                ],
+              )),
+          Positioned(
+              bottom: mq.height * .15,
+              width: mq.width,
+              child: Text(
+                'Made in Bharat ❤️',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white),
+              ))
+        ],
+      ),
     );
   }
 }

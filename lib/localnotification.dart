@@ -7,36 +7,39 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   NotificationService() {
-    _initializeNotifications();
+    initializeNotifications();
   }
 
-  void _initializeNotifications() async {
+  void initializeNotifications() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
-  
-
     final InitializationSettings initializationSettings =
         InitializationSettings(
-            android: initializationSettingsAndroid,
-           );
+      android: initializationSettingsAndroid,
+    );
 
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   Future<void> scheduleNotification(
       int id, String title, String body, DateTime scheduledTime) async {
+    AndroidNotificationDetails androidNotificationDetails =
+        await AndroidNotificationDetails("channelId", "channelName",
+            importance: Importance.high, priority: Priority.high);
+    NotificationDetails notificaationDetails =
+        NotificationDetails(android: androidNotificationDetails);
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
-      title,
-      body,
+      id, title, body,
       tz.TZDateTime.from(scheduledTime, tz.local),
-      const NotificationDetails(
-        android: AndroidNotificationDetails('your channel id', 'your channel name', ),
-      
-      ),
+      notificaationDetails,
+      // const NotificationDetails(
+      //   android: AndroidNotificationDetails('Taskapp', 'Taskapp',
+      //       priority: Priority.high, importance: Importance.high),
+      // ),
       androidAllowWhileIdle: true,
-      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.wallClockTime,
       matchDateTimeComponents: DateTimeComponents.time,
     );
   }

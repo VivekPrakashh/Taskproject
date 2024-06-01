@@ -1,4 +1,4 @@
-
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -6,15 +6,23 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:taskapp/dialogs.dart';
+import 'package:taskapp/localnotification.dart';
 import 'package:taskapp/main.dart';
 import 'package:date_time_picker/date_time_picker.dart';
+import 'package:taskapp/nav.dart';
+import 'package:taskapp/signup.dart';
 
 class Edittask extends StatefulWidget {
-   Edittask({super.key,required this.date,required this.title,required this.description,required this.id});
-String title;
-String description;
-String date;
-String id;
+  Edittask(
+      {super.key,
+      required this.date,
+      required this.title,
+      required this.description,
+      required this.id});
+  String title;
+  String description;
+  String date;
+  String id;
   @override
   State<Edittask> createState() => _EdittaskState();
 }
@@ -24,26 +32,26 @@ class _EdittaskState extends State<Edittask> {
 
   TextEditingController _title = TextEditingController();
   TextEditingController _description = TextEditingController();
-   TextEditingController _selecteddateTime= TextEditingController();
+  TextEditingController _selecteddateTime = TextEditingController();
 
   final _formkey = GlobalKey<FormState>();
-@override
+  @override
   void initState() {
     // TODO: implement initState
     super.initState();
     getdata();
-
   }
-  getdata(){
-   Future.delayed(Duration(seconds: 1), () {
 
+  getdata() {
+    Future.delayed(Duration(seconds: 1), () {
       setState(() {
-         _selecteddateTime.text = widget.date;
-        _title.text=widget.title;
-        _description.text=widget.description;
+        _selecteddateTime.text = widget.date;
+        _title.text = widget.title;
+        _description.text = widget.description;
       });
     });
   }
+
   @override
   Widget build(BuildContext context) {
     print(widget.id);
@@ -178,7 +186,7 @@ class _EdittaskState extends State<Edittask> {
 
                   DateTimePicker(
                     type: DateTimePickerType.dateTimeSeparate,
-                     controller: _selecteddateTime,
+                    controller: _selecteddateTime,
                     dateMask: 'd MMM, yyyy',
                     // initialValue: DateTime.now().toString(),
                     firstDate: DateTime(2000),
@@ -198,9 +206,11 @@ class _EdittaskState extends State<Edittask> {
 
                       return true;
                     },
-                    onChanged: (val){setState(() {
-                      _selecteddateTime.text=val;
-                    });},
+                    onChanged: (val) {
+                      setState(() {
+                        _selecteddateTime.text = val;
+                      });
+                    },
                     validator: (val) {
                       print(val);
                       return null;
@@ -216,14 +226,33 @@ class _EdittaskState extends State<Edittask> {
                     onTap: () {
                       if (_formkey.currentState!.validate()) {
                         _formkey.currentState!.save();
-                        FirebaseFirestore.instance.collection("Task").doc(widget.id).update( {
-
+                          Dialogs.showProgressIndicator(context);
+                        try{
+                        FirebaseFirestore.instance
+                            .collection('Users')
+                            .doc(myUserId)
+                            .collection('Tasks')
+                            .doc(widget.id)
+                            .update(
+                          {
                             "title": _title.text,
                             "description": _description.text,
-                            "date":_selecteddateTime.text
-                          },);
-                         
-                        
+                            "date": _selecteddateTime.text
+                          },
+                        ).then((value) {
+                            fetchTasksAndScheduleNotifications();
+                            setState(() {
+                              _title.text = "";
+                              _description.text = "";
+                              // _selecteddateTime.text = "";
+                            });
+                          });
+                           Dialogs.showSnackbar(context, 'Task added Sucessfully');
+                            Navigator.push(context, MaterialPageRoute(builder: (builder) => Nav()));
+                        } catch (e) {
+                          print("error =>$e");
+                           Dialogs.showSnackbar(context,'Something went wrong');
+                        }
                       }
                     },
                     child: Container(
@@ -255,6 +284,30 @@ class _EdittaskState extends State<Edittask> {
       ),
     ));
   }
+
+final NotificationService notificationService = NotificationService();
+  void fetchTasksAndScheduleNotifications() async {
+    // final tasks = await FirebaseFirestore.instance.collection('Task').get();
+    // print(tasks);
+    // for (var task in tasks.docs) {
+    DateTime deadline = DateTime.parse(_selecteddateTime.text);
+    //   print(deadline);
+    DateTime notificationTime = deadline.subtract(Duration(minutes: 10));
+    //   print(notificationTime);
+    // Schedule the notification
+    try {
+      Random _random = Random();
+      notificationService.scheduleNotification(
+        _random.nextInt(2),
+        'Task Reminder',
+        'Your task "${_title.text}" is due soon!',
+        notificationTime,
+      );
+    } catch (e) {
+      print("error=> $e");
+    }
+  }
+
 }
 
 Widget lable(String lable) {

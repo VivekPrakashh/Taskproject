@@ -1,4 +1,5 @@
-
+import 'dart:developer';
+import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -6,8 +7,11 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:taskapp/dialogs.dart';
+import 'package:taskapp/localnotification.dart';
 import 'package:taskapp/main.dart';
 import 'package:date_time_picker/date_time_picker.dart';
+import 'package:taskapp/nav.dart';
+import 'package:taskapp/signup.dart';
 
 class Addtask extends StatefulWidget {
   const Addtask({super.key});
@@ -18,25 +22,28 @@ class Addtask extends StatefulWidget {
 
 class _AddtaskState extends State<Addtask> {
   late DateTime _dateTime = DateTime.now();
-
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   TextEditingController _title = TextEditingController();
   TextEditingController _description = TextEditingController();
-   TextEditingController _selecteddateTime= TextEditingController();
+  TextEditingController _selecteddateTime = TextEditingController();
 
   final _formkey = GlobalKey<FormState>();
-@override
+  @override
   void initState() {
     // TODO: implement initState
     super.initState();
-
+    getdata();
   }
-  getdata(){
-   Future.delayed(Duration(seconds: 1), () {
+
+  getdata() {
+    Future.delayed(Duration(seconds: 1), () {
       setState(() {
         _selecteddateTime.text = _dateTime.toString();
+        print(_selecteddateTime.text);
       });
     });
   }
+
   @override
   Widget build(BuildContext context) {
     mq = MediaQuery.of(context).size;
@@ -58,17 +65,9 @@ class _AddtaskState extends State<Addtask> {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               const SizedBox(
-                height: 30,
+                height: 60,
               ),
-              IconButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  icon: const Icon(
-                    CupertinoIcons.arrow_left,
-                    color: Colors.white,
-                    size: 28,
-                  )),
+            
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -175,7 +174,7 @@ class _AddtaskState extends State<Addtask> {
                     initialValue: DateTime.now().toString(),
                     firstDate: DateTime(2000),
                     lastDate: DateTime(2100),
-                    icon: Icon(
+                    icon: const Icon(
                       Icons.event,
                       color: Colors.white,
                     ),
@@ -190,9 +189,11 @@ class _AddtaskState extends State<Addtask> {
 
                       return true;
                     },
-                    onChanged: (val){setState(() {
-                      _selecteddateTime.text=val;
-                    });},
+                    onChanged: (val) {
+                      setState(() {
+                        _selecteddateTime.text = val;
+                      });
+                    },
                     validator: (val) {
                       print(val);
                       return null;
@@ -205,23 +206,45 @@ class _AddtaskState extends State<Addtask> {
 
                   // Add task button
                   InkWell(
-                    onTap: () {
+                    onTap: () async {
+                      print(_selecteddateTime.text);
+
                       if (_formkey.currentState!.validate()) {
                         _formkey.currentState!.save();
-                        FirebaseFirestore.instance.collection("Task").add(
-                          {
-                            "title": _title.text,
-                            "description": _description.text,
-                            "date":_selecteddateTime.text
-                          },
-                        );
+                          Dialogs.showProgressIndicator(context);
+                        try {
+                          await _firestore
+                              .collection('Users')
+                              .doc(myUserId)
+                              .collection('Tasks')
+                              .add(
+                            {
+                              "title": _title.text,
+                              "description": _description.text,
+                              "date": _selecteddateTime.text,
+                              "status":0
+                            },
+                          ).then((value) {
+                            fetchTasksAndScheduleNotifications();
+                            setState(() {
+                              _title.text = "";
+                              _description.text = "";
+                              // _selecteddateTime.text = "";
+                            });
+                          });
+                           Dialogs.showSnackbar(context, 'Task added Sucessfully');
+                            Navigator.push(context, MaterialPageRoute(builder: (builder) => Nav()));
+                        } catch (e) {
+                          print("error =>$e");
+                           Dialogs.showSnackbar(context,'Something went wrong');
+                        }
                       }
                     },
                     child: Container(
                         height: 55,
                         width: mq.width,
                         decoration: BoxDecoration(
-                          gradient: LinearGradient(
+                          gradient: const LinearGradient(
                               colors: [Color(0xff8a32f1), Color(0xffad32f9)]),
                           borderRadius: BorderRadius.circular(15),
                         ),
@@ -245,6 +268,29 @@ class _AddtaskState extends State<Addtask> {
         ),
       ),
     ));
+  }
+
+  final NotificationService notificationService = NotificationService();
+  void fetchTasksAndScheduleNotifications() async {
+    // final tasks = await FirebaseFirestore.instance.collection('Task').get();
+    // print(tasks);
+    // for (var task in tasks.docs) {
+    DateTime deadline = DateTime.parse(_selecteddateTime.text);
+    //   print(deadline);
+    DateTime notificationTime = deadline.subtract(Duration(minutes: 10));
+    //   print(notificationTime);
+    // Schedule the notification
+    try {
+      Random _random = Random();
+      notificationService.scheduleNotification(
+        _random.nextInt(2),
+        'Task Reminder',
+        'Your task "${_title.text}" is due soon!',
+        notificationTime,
+      );
+    } catch (e) {
+      print("error=> $e");
+    }
   }
 }
 
